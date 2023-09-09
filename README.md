@@ -4,7 +4,7 @@
 [![Downloads](https://pepy.tech/badge/cinrad)](https://pepy.tech/project/cinrad)
 [![DOI](https://zenodo.org/badge/139155365.svg)](https://zenodo.org/badge/latestdoi/139155365)
 
-Decode CINRAD (China New Generation Weather Radar) data and visualize. 
+Decode CINRAD (China New Generation Weather Radar) data and visualize.
 
 [中文说明](https://github.com/CyanideCN/PyCINRAD/blob/master/README_zh.md)
 
@@ -66,12 +66,15 @@ Attributes:
     nyquist_vel:      8.37801
     task:             VCP21D
 ```
+
 For example, it's very convenient to save data as netcdf format.
+
 ```python
 >>> data.to_netcdf('1.nc')
 ```
 
 `xarray` also makes interpolation very convenient.
+
 ```python
 >>> data.interp(azimuth=np.deg2rad(300), distance=180)
 <xarray.Dataset>
@@ -114,6 +117,14 @@ Convert data structure defined in this module into `pyart.core.Radar` is very si
 ```python
 from cinrad.io import PUP
 f = PUP(your_radar_file)
+data = f.get_data()
+```
+
+ROSE2.0 standard format products, with _FMT_ in the filename, currently support most radial format data (PPI, CR, OHP, etc.), as well as some raster data (RHI, ET, VIL, etc.), and also support special format data (HI, TVS, MESO, STI, etc.).
+
+```python
+from cinrad.io import StandardPUP
+f = StandardPUP(your_radar_file)
 data = f.get_data()
 ```
 
@@ -163,9 +174,47 @@ fig('D:\\')
 
 `cinrad.calc.GridMapper` can merge different radar scans into a cartesian grid.
 
+```python
+import cinrad
+f1 = cinrad.io.StandardData(your_radar_file1)
+f2 = cinrad.io.StandardData(your_radar_file2)
+br1 = f1.get_data(2, 230, "REF")
+br2 = f2.get_data(2, 230, "REF")
+br = br1 + br2
+gm = cinrad.calc.GridMapper(list(rls), max_dist=0.05)
+grids = gm(step=0.05)
+# to visualize:PPI(grids,style="black")
+```
+
+The combined reflectivity puzzle can be combined using the method below
+
+```python
+def mergeCR(rls: list) -> xr.Dataset:
+    """
+    combined reflectivity from different radar
+
+    parameters: list of angle-by-elevation Datasets from different radar：
+        >>> rls1 = list(f1.iter_tilt(230, "REF"))
+        >>> rls2 = list(f2.iter_tilt(230, "REF"))
+        >>> rls = rls1 + rls2
+    """
+    allcr = cinrad.calc.quick_cr(rls)
+    r_attr = allcr.attr
+    r_attr["tangential_reso"] = np.nan
+    r_attr["elevation"] = 0
+    r_attr["site_name"] = "RADMAP"
+    r_attr["site_code"] = "RADMAP"
+    for k in ["site_longitude", "site_latitude", "nyquist_vel"]:
+        if k in r_attr:
+            del r_attr[k]
+    allcr.attrs = r_attr
+    return allcr
+```
+
 #### Hydrometeor classification
 
 `cinrad.calc.hydro_class` uses algorithm suggested by Dolan to classify hydrometeors into 10 categories. (Requires REF, ZDR, RHO, and KDP)
+
 ```python
 import cinrad
 f = cinrad.io.StandardData(your_radar_file)
@@ -178,6 +227,7 @@ hcl = cinrad.calc.hydro_class(ref, zdr, rho, kdp)
 fig = cinrad.visualize.PPI(hcl,style="white")
 fig("d:/")
 ```
+
 ### cinrad.correct
 
 This submodule provides algorithms to correct raw radar fields.
@@ -212,22 +262,22 @@ The path passed into the class can either be the folder path or the file path. A
 
 The summary of args that can be passed into `PPI` are listed as follows.
 
-|arg|function|
-|:-:|:-:|
-|`cmap`|colormaps used for plotting|
-|`norm`|norm used for plotting|
-|`nlabel`|number of labels on the colorbar|
-|`label`|labels on the colorbar|
-|`highlight`|highlight area of input name|
-|`dpi`|dpi of figure|
-|`extent`|area to plot e.g. `extent=[90, 91, 29, 30]`|
-|`section`|cross-section data to ppi plot|
-|`style`|control the background color `black` or `white` or `transparent`|
-|`add_city_names`|annotate name of city on the plot|
+|       arg        |                             function                             |
+| :--------------: | :--------------------------------------------------------------: |
+|      `cmap`      |                   colormaps used for plotting                    |
+|      `norm`      |                      norm used for plotting                      |
+|     `nlabel`     |                 number of labels on the colorbar                 |
+|     `label`      |                      labels on the colorbar                      |
+|   `highlight`    |                   highlight area of input name                   |
+|      `dpi`       |                          dpi of figure                           |
+|     `extent`     |           area to plot e.g. `extent=[90, 91, 29, 30]`            |
+|    `section`     |                  cross-section data to ppi plot                  |
+|     `style`      | control the background color `black` or `white` or `transparent` |
+| `add_city_names` |                annotate name of city on the plot                 |
 
 Beside args, class `PPI` has some other auxiliary plotting functions.
 
-##### PPI.plot_range_rings(self, _range, color='white', linewidth=0.5, **kwargs)
+##### PPI.plot_range_rings(self, \_range, color='white', linewidth=0.5, \*\*kwargs)
 
 Plot range rings on the PPI plot.
 

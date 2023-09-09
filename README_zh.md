@@ -119,6 +119,14 @@ f = PUP(your_radar_file)
 data = f.get_data()
 ```
 
+ROSE2.0 新标准格式产品，文件中一般有“_FMT_”，目前支持绝大部分径向格式数据（PPI、CR、OHP等），以及部分栅格数据（RHI、ET、VIL等），还支持特殊格式的数据（HI、TVS、MESO、STI等）。
+
+```python
+from cinrad.io import StandardPUP
+f = StandardPUP(your_radar_file)
+data = f.get_data()
+```
+
 #### 读取相控阵雷达数据
 
 `cinrad.io.PhasedArrayData`提供读取相控阵雷达基数据的功能，用法和其他接口非常类似。
