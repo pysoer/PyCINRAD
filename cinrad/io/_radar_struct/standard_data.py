@@ -280,3 +280,75 @@ l3_tvs_table = [
 ]
 
 l3_tvs_table_dtype = np.dtype(l3_tvs_table)
+
+l3_sti_header = [
+    ("num_of_storms", "i4"),
+    ("num_of_continuous_storms", "i4"),
+    ("num_of_components", "i4"),
+    ("avg_speed", "f4"),
+    ("avg_direction", "f4"),
+]
+
+l3_sti_header_dtype = np.dtype(l3_sti_header)
+
+l3_sti_motion = [
+    ("azimuth", "f4"),
+    ("range", "i4"),
+    ("speed", "f4"),
+    ("direction", "f4"),
+    ("forecast_error", "i4"),
+    ("mean_forecast_error", "i4"),
+]
+
+l3_sti_motion_dtype = np.dtype(l3_sti_motion)
+
+l3_sti_position = [
+    ("azimuth", "f4"),
+    ("range", "i4"),
+    ("volume_time", "i4"),
+]
+
+l3_sti_position_dtype = np.dtype(l3_sti_position)
+
+l3_sti_attribute = [
+    ("id", "i4"),
+    ("type", "i4"),
+    ("num_of_volumes", "i4"),
+    ("azimuth", "f4"),
+    ("range", "i4"),
+    ("height", "i4"),
+    ("max_ref", "f4"),
+    ("max_ref_height", "i4"),
+    ("vil", "f4"),
+    ("num_of_components", "i4"),
+    ("index_of_first", "i4"),
+    ("top_height", "i4"),
+    ("index_of_top", "i4"),
+    ("bottom_height", "i4"),
+    ("index_of_bottom", "i4"),
+]
+
+l3_sti_attribute_dtype = np.dtype(l3_sti_attribute)
+
+l3_sti_component = [
+    ("height", "i4"),
+    ("max_ref", "f4"),
+    ("index_of_next", "i4"),
+]
+
+l3_sti_component_dtype = np.dtype(l3_sti_component)
+
+l3_sti_adaptation = [
+    ("def_dir", "i4"),
+    ("def_spd", "f4"),
+    ("max_vtime", "i4"),
+    ("num_of_past_volume", "i4"),
+    ("corr_speed", "f4"),
+    ("min_speed", "f4"),
+    ("allow_error", "i4"),
+    ("frc_intvl", "i4"),
+    ("num_frc_intvl", "i4"),
+    ("err_intvl", "i4"),
+]
+
+l3_sti_adaptation_dtype = np.dtype(l3_sti_adaptation)

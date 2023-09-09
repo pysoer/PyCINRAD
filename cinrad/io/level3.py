@@ -472,6 +472,8 @@ class StandardPUP(RadarBase):
             self._parse_radial_fmt()
         elif self.ptype in [6, 8, 9, 10, 18, 23]:
             self._parse_raster_fmt()
+        elif self.ptype == 37:
+            self._parse_sti_fmt()
         elif self.ptype == 38:
             self._parse_hail_fmt()
         elif self.ptype == 39:
@@ -722,6 +724,71 @@ class StandardPUP(RadarBase):
             "minpvdv": minpvdv,
         }
         ds = Dataset(data_dict, attrs=attrs_dict)
+        ds["longitude"] = DataArray(lon[:, 0])
+        ds["latitude"] = DataArray(lat[:, 0])
+        self._dataset = ds
+
+    def _parse_sti_fmt(self):
+        sti_header = np.frombuffer(self.f.read(20), L3_sti_header)
+        sti_count = sti_header["num_of_storms"][0]
+        track_count = sti_count if sti_count < 100 else 100
+        attr_count = track_count
+        sti_current = np.frombuffer(self.f.read(24 * track_count), L3_sti_motion)
+        sti_azimuth = np.array(sti_current["azimuth"])
+        sti_range = np.array(sti_current["range"])[:, np.newaxis]
+        curr_speed = DataArray(sti_current["speed"])
+        curr_direction = DataArray(sti_current["direction"])
+        lon, lat = get_coordinate(
+            sti_range / 1000,
+            sti_azimuth * deg2rad,
+            self.params["elevation"],
+            self.stationlon,
+            self.stationlat,
+        )
+        # forecast = []
+        # for _ in range(track_count):
+        #     forecast_positon_count = np.frombuffer(self.f.read(4), "i4")[0]
+        #     forecast_positions = []
+        #     for i in range(forecast_positon_count):
+        #         forecast_positions.append(
+        #             np.frombuffer(self.f.read(12), L3_sti_position)
+        #         )
+        #     forecast.append(forecast_positions)
+        # history = []
+        # for _ in range(track_count):
+        #     history_positon_count = np.frombuffer(self.f.read(4), "i4")[0]
+        #     history_positions = []
+        #     for _ in range(history_positon_count):
+        #         history_positions.append(
+        #             np.frombuffer(self.f.read(12), L3_sti_position)
+        #         )
+        #     history.append(history_positions)
+        # sti_attributes=[]
+        # for _ in range(attr_count):
+        #     sti_attribute=np.frombuffer(self.f.read(60), L3_sti_attribute)
+        #     sti_attributes.append(sti_attribute)
+        # sti_components=[]
+        # for _ in range(attr_count):
+        #     sti_component=np.frombuffer(self.f.read(12), L3_sti_component)
+        #     sti_components.append(sti_component)
+        # sti_adaptation=np.frombuffer(self.f.read(40), L3_sti_adaptation)
+        # print("f.tell()",self.f.tell())
+
+        ds = Dataset(
+            {
+                "curr_speed": curr_speed,
+                "curr_direction": curr_direction,
+            },
+            attrs={
+                "scan_time": self.scantime.strftime("%Y-%m-%d %H:%M:%S"),
+                "site_code": self.code,
+                "site_name": self.name,
+                "site_longitude": self.stationlon,
+                "site_latitude": self.stationlat,
+                "task": self.task_name,
+                "sti_count": sti_count,
+            },
+        )
         ds["longitude"] = DataArray(lon[:, 0])
         ds["latitude"] = DataArray(lat[:, 0])
         self._dataset = ds

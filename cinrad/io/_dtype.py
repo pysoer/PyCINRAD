@@ -32,6 +32,8 @@ from cinrad.io._radar_struct.standard_data import (
     l3_meso_table_dtype as L3_meso,
     l3_feature_table_dtype as L3_feature,
     l3_tvs_table_dtype as L3_tvs,
+    l3_sti_header_dtype as L3_sti_header,
+    l3_sti_motion_dtype as L3_sti_motion,
 )
 from cinrad.io._radar_struct.CD import (
     radarsite_dtype as CD_site,
