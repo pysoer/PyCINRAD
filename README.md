@@ -166,7 +166,18 @@ fig('D:\\')
 #### Hydrometeor classification
 
 `cinrad.calc.hydro_class` uses algorithm suggested by Dolan to classify hydrometeors into 10 categories. (Requires REF, ZDR, RHO, and KDP)
+```python
+import cinrad
+f = cinrad.io.StandardData(your_radar_file)
+ref = f.get_data(0, 230, 'REF')
+zdr = f.get_data(0, 230, 'ZDR')
+rho = f.get_data(0, 230, 'RHO')
+kdp = f.get_data(0, 230, 'KDP')
 
+hcl = cinrad.calc.hydro_class(ref, zdr, rho, kdp)
+fig = cinrad.visualize.PPI(hcl,style="white")
+fig("d:/")
+```
 ### cinrad.correct
 
 This submodule provides algorithms to correct raw radar fields.
@@ -211,7 +222,7 @@ The summary of args that can be passed into `PPI` are listed as follows.
 |`dpi`|dpi of figure|
 |`extent`|area to plot e.g. `extent=[90, 91, 29, 30]`|
 |`section`|cross-section data to ppi plot|
-|`style`|control the background color `black` or `white`|
+|`style`|control the background color `black` or `white` or `transparent`|
 |`add_city_names`|annotate name of city on the plot|
 
 Beside args, class `PPI` has some other auxiliary plotting functions.

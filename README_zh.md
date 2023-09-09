@@ -175,12 +175,54 @@ fig('D:\\')
 
 #### 雷达拼图
 
-`cinrad.calc.GridMapper`可以将不同雷达的扫描数据合并成雷达格点拼图。
+`cinrad.calc.GridMapper`可以将不同雷达的扫描数据合并成雷达格点拼图，即拼基本反射率。
+```python
+import cinrad
+f1 = cinrad.io.StandardData(your_radar_file1)
+f2 = cinrad.io.StandardData(your_radar_file2)
+br1 = f1.get_data(2, 230, "REF")
+br2 = f2.get_data(2, 230, "REF")
+br = br1 + br2
+gm = cinrad.calc.GridMapper(list(rls), max_dist=0.05)
+grids = gm(step=0.05)
+# to visualize:PPI(grids,style="black")
+```
+`组合反射率拼图`可使用下面方法
+```python
+def mergeCR(rls: list) -> xr.Dataset:
+    """ 
+    组合反射率拼图
 
+    输入参数为多个雷达的逐仰角Dataset列表：
+        >>> rls1 = list(f1.iter_tilt(230, "REF"))
+        >>> rls2 = list(f2.iter_tilt(230, "REF"))
+        >>> rls = rls1 + rls2
+    """
+    allcr = cinrad.calc.quick_cr(rls)
+    r_attr = allcr.attr
+    r_attr["tangential_reso"] = np.nan
+    r_attr["elevation"] = 0
+    r_attr["site_name"] = "RADMAP"
+    r_attr["site_code"] = "RADMAP"
+    for k in ["site_longitude", "site_latitude", "nyquist_vel"]:
+        if k in r_attr:
+            del r_attr[k]
+    allcr.attrs = r_attr
+    return allcr
+```
 #### 水凝物分类
 
 `cinrad.calc.hydro_class`从反射率，差分反射率，协相关系数和差分传播相移率计算出10种水凝物类型。
-
+```python
+import cinrad
+f = cinrad.io.StandardData(your_radar_file)
+ref = f.get_data(0, 230, 'REF')
+zdr = f.get_data(0, 230, 'ZDR')
+rho = f.get_data(0, 230, 'RHO')
+kdp = f.get_data(0, 230, 'KDP')
+hcl = cinrad.calc.hydro_class(ref, zdr, rho, kdp)
+# to visualize:PPI(hcl,style="black")
+```
 ### cinrad.correct
 
 提供雷达原数据的校正。
@@ -229,7 +271,7 @@ fig('D:\\')
 |`dpi`|分辨率|
 |`extent`|绘图的经纬度范围 e.g. `extent=[90, 91, 29, 30]`|
 |`section`|在`ppi`图中绘制的剖面的数据，为`xarray.Dataset`类型|
-|`style`|背景颜色，可设置为黑色`black`或者白色`white`|
+|`style`|背景颜色，可设置为黑色`black`或者白色`white`或者透明图`transparent`|
 |`add_city_names`|标注城市名|
 
 同时`PPI`类中定义有其他绘图函数：
