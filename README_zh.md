@@ -195,29 +195,7 @@ gm = cinrad.calc.GridMapper(list(rls), max_dist=0.05)
 grids = gm(step=0.05)
 # to visualize:PPI(grids,style="black")
 ```
-`组合反射率拼图`可使用下面方法
-```python
-def mergeCR(rls: list) -> xr.Dataset:
-    """ 
-    组合反射率拼图
-
-    输入参数为多个雷达的逐仰角Dataset列表：
-        >>> rls1 = list(f1.iter_tilt(230, "REF"))
-        >>> rls2 = list(f2.iter_tilt(230, "REF"))
-        >>> rls = rls1 + rls2
-    """
-    allcr = cinrad.calc.quick_cr(rls)
-    r_attr = allcr.attr
-    r_attr["tangential_reso"] = np.nan
-    r_attr["elevation"] = 0
-    r_attr["site_name"] = "RADMAP"
-    r_attr["site_code"] = "RADMAP"
-    for k in ["site_longitude", "site_latitude", "nyquist_vel"]:
-        if k in r_attr:
-            del r_attr[k]
-    allcr.attrs = r_attr
-    return allcr
-```
+`组合反射率拼图`还无法直接支持
 #### 水凝物分类
 
 `cinrad.calc.hydro_class`从反射率，差分反射率，协相关系数和差分传播相移率计算出10种水凝物类型。
@@ -253,9 +231,13 @@ v_corrected = cinrad.correct.dealias(v)
 示例：
 
 ```python
+# eg.1
 from cinrad.visualize import PPI
-fig = PPI(R) #绘制基本反射率图片
+fig = PPI(data, add_city_names=True, dpi=300, style="black") #绘制基本反射率图片
+fig.gridlines(draw_labels=True,linewidth=1) #画网格线
 fig('D:\\') #传入文件夹路径保存图片
+
+# eg.2
 from cinrad.visualize import Section
 fig = Section(sec) #绘制剖面
 fig('D:\\')
@@ -287,12 +269,26 @@ fig('D:\\')
 
 在PPI图上绘制圆圈。
 
+##### PPI.gridlines(self, draw_labels: bool = True, linewidth: Number_T = 0, **kwargs):
+
+在PPI上绘制经纬度网格线s
+
 ##### PPI.plot_cross_section(self, data, ymax=None)
 
 在PPI图下方加入VCS剖面图，和`vcs`参数相似，用此函数还可以自定义y轴的范围。需要注意的是，在`%matplotlib inline`环境下，不能使用此方法插入剖面。请在实例化`PPI`时就使用`section`参数来插入剖面。
 
 ```python
-fig = cinrad.visualize.PPI(data, section=section_data)
+f = StandardData(your_radar_file)
+rl = list(f.iter_tilt(230, "REF"))
+cr = cinrad.calc.quick_cr(rl)
+fig = PPI(cr, dpi=300, style="black")
+vcs = cinrad.calc.VCS(rl)
+sec = vcs.get_section(start_cart=(112, 27), end_cart=(114, 28))  # 传入经纬度坐标
+# sec = vcs.get_section(start_polar=(113, 250), end_polar=(114, 28)) # 传入极坐标
+fig.plot_cross_section(sec, linecolor="red")
+fig.plot_range_rings([100, 200, 300], color="white", linewidth=3)# 用这个来画圈
+fig.gridlines(draw_labels=True, linewidth=1, color="white")# 用这个来画经纬度网格线
+fig("D:/")
 ```
 
 ##### PPI.storm_track_info(self, filepath)

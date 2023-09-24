@@ -6,7 +6,7 @@
 
 Decode CINRAD (China New Generation Weather Radar) data and visualize.
 
-[中文说明](https://github.com/CyanideCN/PyCINRAD/blob/master/README_zh.md)
+[中文说明](README_zh.md)
 
 **`example` folder contains detailed examples!**
 
@@ -186,30 +186,9 @@ grids = gm(step=0.05)
 # to visualize:PPI(grids,style="black")
 ```
 
-The combined reflectivity puzzle can be combined using the method below
+The combined reflectivity puzzle is TODO
 
-```python
-def mergeCR(rls: list) -> xr.Dataset:
-    """
-    combined reflectivity from different radar
 
-    parameters: list of angle-by-elevation Datasets from different radar：
-        >>> rls1 = list(f1.iter_tilt(230, "REF"))
-        >>> rls2 = list(f2.iter_tilt(230, "REF"))
-        >>> rls = rls1 + rls2
-    """
-    allcr = cinrad.calc.quick_cr(rls)
-    r_attr = allcr.attr
-    r_attr["tangential_reso"] = np.nan
-    r_attr["elevation"] = 0
-    r_attr["site_name"] = "RADMAP"
-    r_attr["site_code"] = "RADMAP"
-    for k in ["site_longitude", "site_latitude", "nyquist_vel"]:
-        if k in r_attr:
-            del r_attr[k]
-    allcr.attrs = r_attr
-    return allcr
-```
 
 #### Hydrometeor classification
 
@@ -248,11 +227,15 @@ v_corrected = cinrad.correct.dealias(v)
 Visualize the data stored in acceptable format (`cinrad.datastruct`). It also means that you can using customized data to perform visualization, as long as the data is stored as `xarray.Dataset` and constructed by the same protocol (variables naming conventions, data coordinates and dimensions, etc.) For further information about this method, please see the examples contained in `example` folder.
 
 ```python
+# eg.1
 from cinrad.visualize import PPI
-fig = PPI(R) #Plot PPI
-fig('D:\\') #Pass the path to save the fig
+fig = PPI(data, add_city_names=True, dpi=300, style="black") #draw br
+fig.gridlines(draw_labels=True,linewidth=1)
+fig('D:\\') #save
+
+# eg.2
 from cinrad.visualize import Section
-fig = Section(Slice_) #Plot VCS
+fig = Section(sec) #draw section
 fig('D:\\')
 ```
 
@@ -281,11 +264,29 @@ Beside args, class `PPI` has some other auxiliary plotting functions.
 
 Plot range rings on the PPI plot.
 
+##### PPI.gridlines(self, draw_labels: bool = True, linewidth: Number_T = 0, **kwargs):
+
+Plot gridlines on the PPI plot.
+
 ##### PPI.plot_cross_section(self, data, ymax=None)
 
 Plot VCS section under the PPI plot.
 
 This function is very similar to `vcs` argument of class `PPI`, but the range of y-axis can be adjusted only by this function.
+
+```python
+f = StandardData(your_radar_file)
+rl = list(f.iter_tilt(230, "REF"))
+cr = cinrad.calc.quick_cr(rl)
+fig = PPI(cr, dpi=300, style="black")
+vcs = cinrad.calc.VCS(rl)
+sec = vcs.get_section(start_cart=(112, 27), end_cart=(114, 28))  # cart_sec
+# sec = vcs.get_section(start_polar=(113, 250), end_polar=(114, 28)) # polar_sec
+fig.plot_cross_section(sec, linecolor="red")
+fig.plot_range_rings([100, 200, 300], color="white", linewidth=3) # draw rings
+fig.gridlines(draw_labels=True, linewidth=1, color="white") # draw grids
+fig("D:/")
+```
 
 ##### PPI.storm_track_info(self, filepath)
 
