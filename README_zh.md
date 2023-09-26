@@ -37,8 +37,8 @@ python setup.py install
 
 ```python
 from cinrad.io import CinradReader, StandardData
-f = CinradReader(your_radar_file) #老版本数据
-f = StandardData(your_radar_file) #新版本标准数据
+f = CinradReader(your_radar_file,radar_type="CC") #老版本数据，如果识别雷达型号出错时，手动输入radar_type
+f = StandardData(your_radar_file) #新版本标准数据，一般来说，文件名中间有_FMT_
 f.get_data(tilt, drange, dtype) #获取数据
 f.get_raw(tilt, drange, dtype)
 ```
@@ -163,6 +163,14 @@ data = f.get_data(0, 40, 'REF')
 r_list = [f.get_data(i, drange, 'REF') for i in f.angleindex_r]
 # 或者
 r_list = list(f.iter_tilt(230, 'REF'))
+
+# 计算cr/et/vil/vild
+cr = cinrad.calc.quick_cr(r_list)
+et = cinrad.calc.quick_et(r_list)
+vil = cinrad.calc.quick_vil(r_list)
+vild = cinrad.calc.quick_vild(r_list)
+# 可以调用PPI画图
+fig = cinrad.visualize.PPI(cr)
 ```
 #### VCS
 
@@ -271,7 +279,7 @@ fig('D:\\')
 
 ##### PPI.gridlines(self, draw_labels: bool = True, linewidth: Number_T = 0, **kwargs):
 
-在PPI上绘制经纬度网格线s
+在PPI上绘制经纬度网格线
 
 ##### PPI.plot_cross_section(self, data, ymax=None)
 
