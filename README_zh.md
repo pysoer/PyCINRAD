@@ -37,8 +37,8 @@ python setup.py install
 
 ```python
 from cinrad.io import CinradReader, StandardData
-f = CinradReader(your_radar_file) #老版本数据
-f = StandardData(your_radar_file) #新版本标准数据
+f = CinradReader(your_radar_file,radar_type="CC") #老版本数据，如果识别雷达型号出错时，手动输入radar_type
+f = StandardData(your_radar_file) #新版本标准数据，一般来说，文件名中间有_FMT_
 f.get_data(tilt, drange, dtype) #获取数据
 f.get_raw(tilt, drange, dtype)
 ```
@@ -119,6 +119,20 @@ f = PUP(your_radar_file)
 data = f.get_data()
 ```
 
+```python
+from cinrad.io import SWAN
+f = SWAN(your_radar_file, product="CR")
+data = f.get_data()
+```
+
+ROSE2.0 新标准格式产品，文件中一般有“_FMT_”，目前支持绝大部分径向格式数据（PPI、CR、OHP等），以及部分栅格数据（RHI、ET、VIL等），还支持特殊格式的数据（HI、TVS、MESO、STI等）。
+
+```python
+from cinrad.io import StandardPUP
+f = StandardPUP(your_radar_file)
+data = f.get_data()
+```
+
 #### 读取相控阵雷达数据
 
 `cinrad.io.PhasedArrayData`提供读取相控阵雷达基数据的功能，用法和其他接口非常类似。
@@ -155,6 +169,14 @@ data = f.get_data(0, 40, 'REF')
 r_list = [f.get_data(i, drange, 'REF') for i in f.angleindex_r]
 # 或者
 r_list = list(f.iter_tilt(230, 'REF'))
+
+# 计算cr/et/vil/vild
+cr = cinrad.calc.quick_cr(r_list)
+et = cinrad.calc.quick_et(r_list)
+vil = cinrad.calc.quick_vil(r_list)
+vild = cinrad.calc.quick_vild(r_list)
+# 可以调用PPI画图
+fig = cinrad.visualize.PPI(cr)
 ```
 #### VCS
 
@@ -175,12 +197,32 @@ fig('D:\\')
 
 #### 雷达拼图
 
-`cinrad.calc.GridMapper`可以将不同雷达的扫描数据合并成雷达格点拼图。
-
+`cinrad.calc.GridMapper`可以将不同雷达的扫描数据合并成雷达格点拼图，即拼基本反射率。
+```python
+import cinrad
+f1 = cinrad.io.StandardData(your_radar_file1)
+f2 = cinrad.io.StandardData(your_radar_file2)
+br1 = f1.get_data(2, 230, "REF")
+br2 = f2.get_data(2, 230, "REF")
+br = br1 + br2
+gm = cinrad.calc.GridMapper(list(rls), max_dist=0.05)
+grids = gm(step=0.05)
+# to visualize:PPI(grids,style="black")
+```
+`组合反射率拼图`还无法直接支持
 #### 水凝物分类
 
 `cinrad.calc.hydro_class`从反射率，差分反射率，协相关系数和差分传播相移率计算出10种水凝物类型。
-
+```python
+import cinrad
+f = cinrad.io.StandardData(your_radar_file)
+ref = f.get_data(0, 230, 'REF')
+zdr = f.get_data(0, 230, 'ZDR')
+rho = f.get_data(0, 230, 'RHO')
+kdp = f.get_data(0, 230, 'KDP')
+hcl = cinrad.calc.hydro_class(ref, zdr, rho, kdp)
+# to visualize:PPI(hcl,style="black")
+```
 ### cinrad.correct
 
 提供雷达原数据的校正。
@@ -203,9 +245,13 @@ v_corrected = cinrad.correct.dealias(v)
 示例：
 
 ```python
+# eg.1
 from cinrad.visualize import PPI
-fig = PPI(R) #绘制基本反射率图片
+fig = PPI(data, add_city_names=True, dpi=300, style="black") #绘制基本反射率图片
+fig.gridlines(draw_labels=True,linewidth=1) #画网格线
 fig('D:\\') #传入文件夹路径保存图片
+
+# eg.2
 from cinrad.visualize import Section
 fig = Section(sec) #绘制剖面
 fig('D:\\')
@@ -229,7 +275,7 @@ fig('D:\\')
 |`dpi`|分辨率|
 |`extent`|绘图的经纬度范围 e.g. `extent=[90, 91, 29, 30]`|
 |`section`|在`ppi`图中绘制的剖面的数据，为`xarray.Dataset`类型|
-|`style`|背景颜色，可设置为黑色`black`或者白色`white`|
+|`style`|背景颜色，可设置为黑色`black`或者白色`white`或者透明图`transparent`|
 |`add_city_names`|标注城市名|
 
 同时`PPI`类中定义有其他绘图函数：
@@ -237,12 +283,26 @@ fig('D:\\')
 
 在PPI图上绘制圆圈。
 
+##### PPI.gridlines(self, draw_labels: bool = True, linewidth: Number_T = 0, **kwargs):
+
+在PPI上绘制经纬度网格线
+
 ##### PPI.plot_cross_section(self, data, ymax=None)
 
 在PPI图下方加入VCS剖面图，和`vcs`参数相似，用此函数还可以自定义y轴的范围。需要注意的是，在`%matplotlib inline`环境下，不能使用此方法插入剖面。请在实例化`PPI`时就使用`section`参数来插入剖面。
 
 ```python
-fig = cinrad.visualize.PPI(data, section=section_data)
+f = StandardData(your_radar_file)
+rl = list(f.iter_tilt(230, "REF"))
+cr = cinrad.calc.quick_cr(rl)
+fig = PPI(cr, dpi=300, style="black")
+vcs = cinrad.calc.VCS(rl)
+sec = vcs.get_section(start_cart=(112, 27), end_cart=(114, 28))  # 传入经纬度坐标
+# sec = vcs.get_section(start_polar=(113, 250), end_polar=(114, 28)) # 传入极坐标
+fig.plot_cross_section(sec, linecolor="red")
+fig.plot_range_rings([100, 200, 300], color="white", linewidth=3)# 用这个来画圈
+fig.gridlines(draw_labels=True, linewidth=1, color="white")# 用这个来画经纬度网格线
+fig("D:/")
 ```
 
 ##### PPI.storm_track_info(self, filepath)
