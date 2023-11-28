@@ -352,3 +352,50 @@ l3_sti_adaptation = [
 ]
 
 l3_sti_adaptation_dtype = np.dtype(l3_sti_adaptation)
+
+l3_vwp_header = [
+    ("nyquist_velocity", "f4"),
+    ("number_of_vols", "i4"),
+    ("wind_speed_max", "f4"),
+    ("wind_direction_max", "f4"),
+    ("height_max", "f4"),
+    ("res", "12c"),
+]
+
+l3_vwp_header_dtype = np.dtype(l3_vwp_header)
+
+l3_vwp_table = [
+    ("start_time","i4"),
+    ("height","i4"),
+    ("fitvalid","i4"),
+    ("wind_direction","f4"),
+    ("wind_speed","f4"),
+    ("rms_std","f4"),
+    ("res","8c"),
+]
+
+l3_vwp_table_dtype = np.dtype(l3_vwp_table)
+
+l3_swp = [
+    ("range", "i4"),
+    ("azimuth", "f4"),
+    ("swp", "i4"),
+]
+
+l3_swp_dtype = np.dtype(l3_swp)
+
+l3_uam = [
+    ("range", "i4"),
+    ("azimuth", "f4"),
+    ("a", "i4"),
+    ("b", "i4"),
+    ("deg", "i4"),
+    ("max1", "f4"),
+    ("max2", "f4"),
+    ("max3", "f4"),
+    ("max4", "f4"),
+    ("max5", "f4"),
+    ("area", "f4"),
+]
+
+l3_uam_dtype = np.dtype(l3_uam)
