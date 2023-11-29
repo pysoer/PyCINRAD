@@ -13,3 +13,6 @@
 docs/build
 .coverage
 htmlcov
+.DS_Store
+**/.DS_Store
+.DS_Store?

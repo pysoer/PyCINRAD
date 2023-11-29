@@ -4,9 +4,9 @@
 [![Downloads](https://pepy.tech/badge/cinrad)](https://pepy.tech/project/cinrad)
 [![DOI](https://zenodo.org/badge/139155365.svg)](https://zenodo.org/badge/latestdoi/139155365)
 
-Decode CINRAD (China New Generation Weather Radar) data and visualize. 
+Decode CINRAD (China New Generation Weather Radar) data and visualize.
 
-[中文说明](https://github.com/CyanideCN/PyCINRAD/blob/master/README_zh.md)
+[中文说明](README_zh.md)
 
 **`example` folder contains detailed examples!**
 
@@ -66,12 +66,15 @@ Attributes:
     nyquist_vel:      8.37801
     task:             VCP21D
 ```
+
 For example, it's very convenient to save data as netcdf format.
+
 ```python
 >>> data.to_netcdf('1.nc')
 ```
 
 `xarray` also makes interpolation very convenient.
+
 ```python
 >>> data.interp(azimuth=np.deg2rad(300), distance=180)
 <xarray.Dataset>
@@ -114,6 +117,14 @@ Convert data structure defined in this module into `pyart.core.Radar` is very si
 ```python
 from cinrad.io import PUP
 f = PUP(your_radar_file)
+data = f.get_data()
+```
+
+ROSE2.0 standard format products, with _FMT_ in the filename, currently support most radial format data (PPI, CR, OHP, etc.), as well as some raster data (RHI, ET, VIL, etc.), and also support special format data (HI, TVS, MESO, STI, etc.).
+
+```python
+from cinrad.io import StandardPUP
+f = StandardPUP(your_radar_file)
 data = f.get_data()
 ```
 
@@ -163,9 +174,38 @@ fig('D:\\')
 
 `cinrad.calc.GridMapper` can merge different radar scans into a cartesian grid.
 
+```python
+import cinrad
+f1 = cinrad.io.StandardData(your_radar_file1)
+f2 = cinrad.io.StandardData(your_radar_file2)
+br1 = f1.get_data(2, 230, "REF")
+br2 = f2.get_data(2, 230, "REF")
+br = br1 + br2
+gm = cinrad.calc.GridMapper(list(rls), max_dist=0.05)
+grids = gm(step=0.05)
+# to visualize:PPI(grids,style="black")
+```
+
+The combined reflectivity puzzle is TODO
+
+
+
 #### Hydrometeor classification
 
 `cinrad.calc.hydro_class` uses algorithm suggested by Dolan to classify hydrometeors into 10 categories. (Requires REF, ZDR, RHO, and KDP)
+
+```python
+import cinrad
+f = cinrad.io.StandardData(your_radar_file)
+ref = f.get_data(0, 230, 'REF')
+zdr = f.get_data(0, 230, 'ZDR')
+rho = f.get_data(0, 230, 'RHO')
+kdp = f.get_data(0, 230, 'KDP')
+
+hcl = cinrad.calc.hydro_class(ref, zdr, rho, kdp)
+fig = cinrad.visualize.PPI(hcl,style="white")
+fig("d:/")
+```
 
 ### cinrad.correct
 
@@ -187,11 +227,15 @@ v_corrected = cinrad.correct.dealias(v)
 Visualize the data stored in acceptable format (`cinrad.datastruct`). It also means that you can using customized data to perform visualization, as long as the data is stored as `xarray.Dataset` and constructed by the same protocol (variables naming conventions, data coordinates and dimensions, etc.) For further information about this method, please see the examples contained in `example` folder.
 
 ```python
+# eg.1
 from cinrad.visualize import PPI
-fig = PPI(R) #Plot PPI
-fig('D:\\') #Pass the path to save the fig
+fig = PPI(data, add_city_names=True, dpi=300, style="black") #draw br
+fig.gridlines(draw_labels=True,linewidth=1)
+fig('D:\\') #save
+
+# eg.2
 from cinrad.visualize import Section
-fig = Section(Slice_) #Plot VCS
+fig = Section(sec) #draw section
 fig('D:\\')
 ```
 
@@ -201,30 +245,48 @@ The path passed into the class can either be the folder path or the file path. A
 
 The summary of args that can be passed into `PPI` are listed as follows.
 
-|arg|function|
-|:-:|:-:|
-|`cmap`|colormaps used for plotting|
-|`norm`|norm used for plotting|
-|`nlabel`|number of labels on the colorbar|
-|`label`|labels on the colorbar|
-|`highlight`|highlight area of input name|
-|`dpi`|dpi of figure|
-|`extent`|area to plot e.g. `extent=[90, 91, 29, 30]`|
-|`section`|cross-section data to ppi plot|
-|`style`|control the background color `black` or `white`|
-|`add_city_names`|annotate name of city on the plot|
+|       arg        |                             function                             |
+| :--------------: | :--------------------------------------------------------------: |
+|      `cmap`      |                   colormaps used for plotting                    |
+|      `norm`      |                      norm used for plotting                      |
+|     `nlabel`     |                 number of labels on the colorbar                 |
+|     `label`      |                      labels on the colorbar                      |
+|   `highlight`    |                   highlight area of input name                   |
+|      `dpi`       |                          dpi of figure                           |
+|     `extent`     |           area to plot e.g. `extent=[90, 91, 29, 30]`            |
+|    `section`     |                  cross-section data to ppi plot                  |
+|     `style`      | control the background color `black` or `white` or `transparent` |
+| `add_city_names` |                annotate name of city on the plot                 |
 
 Beside args, class `PPI` has some other auxiliary plotting functions.
 
-##### PPI.plot_range_rings(self, _range, color='white', linewidth=0.5, **kwargs)
+##### PPI.plot_range_rings(self, \_range, color='white', linewidth=0.5, \*\*kwargs)
 
 Plot range rings on the PPI plot.
+
+##### PPI.gridlines(self, draw_labels: bool = True, linewidth: Number_T = 0, **kwargs):
+
+Plot gridlines on the PPI plot.
 
 ##### PPI.plot_cross_section(self, data, ymax=None)
 
 Plot VCS section under the PPI plot.
 
 This function is very similar to `vcs` argument of class `PPI`, but the range of y-axis can be adjusted only by this function.
+
+```python
+f = StandardData(your_radar_file)
+rl = list(f.iter_tilt(230, "REF"))
+cr = cinrad.calc.quick_cr(rl)
+fig = PPI(cr, dpi=300, style="black")
+vcs = cinrad.calc.VCS(rl)
+sec = vcs.get_section(start_cart=(112, 27), end_cart=(114, 28))  # cart_sec
+# sec = vcs.get_section(start_polar=(113, 250), end_polar=(114, 28)) # polar_sec
+fig.plot_cross_section(sec, linecolor="red")
+fig.plot_range_rings([100, 200, 300], color="white", linewidth=3) # draw rings
+fig.gridlines(draw_labels=True, linewidth=1, color="white") # draw grids
+fig("D:/")
+```
 
 ##### PPI.storm_track_info(self, filepath)
 
