@@ -21,7 +21,7 @@ def check_pyart_installed(func: Callable) -> Callable:
     @wraps(func)
     def deco(*args, **kwargs):
         if not PYART_INSTALLED:
-            raise ImportError("pyart is not installed")
+            raise ImportError("pyart is not installed, use pip install arm_pyart.")
         return func(*args, **kwargs)
 
     return deco
@@ -35,6 +35,7 @@ mapping = {
     "ZDR": "differential_reflectivity",
     "RHO": "cross_correlation_ratio",
     "KDP": "specific_differential_phase",
+    "SQI": "normalized_coherent_power"
 }
 
 
