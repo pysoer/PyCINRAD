@@ -1,5 +1,6 @@
 import os
 import sys
+import ast
 import datetime
 import traceback
 from functools import partial
@@ -42,20 +43,63 @@ CALC_MAP = {
 }
 
 
-def read(fpath):
+# Reader interface map (mirrors cinrad.io.read_auto docstring)
+READER_MAP = {
+    'read_auto': cinrad.io.read_auto,
+    'StandardData': cinrad.io.StandardData,
+    'StandardPUP': cinrad.io.StandardPUP,
+    'MocMosaic': cinrad.io.MocMosaic,
+    'SWAN': cinrad.io.SWAN,
+    'CinradReader': cinrad.io.CinradReader,
+    'PhasedArrayData': cinrad.io.PhasedArrayData,
+}
+
+
+def _parse_reader_args(args_str):
+    """Parse extra kwargs string like 'radar_type=SA, foo=1' into a dict."""
+    kwargs = {}
+    if not args_str or not args_str.strip():
+        return kwargs
+    for part in args_str.split(','):
+        part = part.strip()
+        if not part or '=' not in part:
+            continue
+        k, v = part.split('=', 1)
+        k = k.strip()
+        v = v.strip()
+        if not k:
+            continue
+        try:
+            kwargs[k] = ast.literal_eval(v)
+        except Exception:
+            kwargs[k] = v
+    return kwargs
+
+
+def read(fpath, reader='read_auto', args_str=''):
+    """Read radar data with the selected interface.
+
+    Args:
+        fpath: path of radar data file.
+        reader: interface name in READER_MAP, default 'read_auto'.
+        args_str: extra keyword arguments string, e.g. 'radar_type=SA'.
+    """
     try:
-        f = cinrad.io.read_auto(fpath)
-        return f
+        kwargs = _parse_reader_args(args_str)
+        if reader in READER_MAP and reader != 'read_auto':
+            return READER_MAP[reader](fpath, **kwargs)
+        return cinrad.io.read_auto(fpath)
     except Exception:
         try:
-            f = cinrad.io.CinradReader(fpath)
-            return f
+            return cinrad.io.read_auto(fpath)
         except Exception:
             try:
-                f = cinrad.io.StandardData(fpath)
-                return f
+                return cinrad.io.CinradReader(fpath)
             except Exception:
-                return None
+                try:
+                    return cinrad.io.StandardData(fpath)
+                except Exception:
+                    return None
 
 
 class Figure_Canvas(FigureCanvas):
@@ -246,7 +290,11 @@ class RadarUI(Ui_MainWindow):
         QtWidgets.QApplication.processEvents()
 
         try:
-            self.cinrad = read(fn)
+            reader = self.reader_combo.currentData()
+            if not reader:
+                reader = 'read_auto'
+            args = self.reader_args.text().strip()
+            self.cinrad = read(fn, reader, args)
         except Exception:
             self.cinrad = None
 
@@ -533,6 +581,27 @@ class RadarUI(Ui_MainWindow):
 
         return data
 
+    def _trim_to_extent(self, data, extent):
+        """Crop data to the user-defined lon/lat extent for faster rendering."""
+        if not extent or data is None:
+            return data
+        try:
+            lon_min, lon_max, lat_min, lat_max = extent
+            lon = data['longitude']
+            lat = data['latitude']
+            cropped = data.where(
+                (lon >= lon_min) & (lon <= lon_max)
+                & (lat >= lat_min) & (lat <= lat_max),
+                drop=True,
+            )
+            # Fall back to original data if cropping leaves it empty
+            # (i.e. the extent does not overlap the data).
+            if all(v > 0 for v in cropped.sizes.values()):
+                return cropped
+        except Exception as e:
+            print(f'[trim] extent crop skipped: {e}')
+        return data
+
     def draw(self):
         if self._drawing:
             self.statusbar.showMessage('正在绘制中，请稍候...', 2000)
@@ -595,6 +664,9 @@ class RadarUI(Ui_MainWindow):
             if data is None:
                 self._message('数据处理失败')
                 return
+
+            # Crop data to the user-defined extent to speed up rendering
+            data = self._trim_to_extent(data, extent)
 
             # --- Data ready, now run PPI construction in a thread ---
             # Capture all UI values before starting thread (avoid cross-thread access)

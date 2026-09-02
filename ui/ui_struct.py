@@ -35,6 +35,34 @@ class Ui_MainWindow(object):
         self.left_layout.setContentsMargins(6, 6, 6, 6)
         self.left_layout.setSpacing(6)
 
+        # --- Data Reader Selection ---
+        self.reader_group = QtWidgets.QGroupBox("数据接口")
+        self.reader_layout = QtWidgets.QVBoxLayout(self.reader_group)
+        self.reader_combo = QtWidgets.QComboBox()
+        self.reader_combo.setMinimumHeight(26)
+        readers = [
+            ("read_auto", "自动识别接口(默认)"),
+            ("StandardData", "标准格式基数据"),
+            ("StandardPUP", "标准PUP产品"),
+            ("MocMosaic", "拼图V3.0(MocMosaic)"),
+            ("SWAN", "SWAN3/风雷(SWAN)"),
+            ("CinradReader", "老格式基数据(CinradReader)"),
+            ("PhasedArrayData", "相控阵(PhasedArrayData)"),
+        ]
+        for key, tip in readers:
+            self.reader_combo.addItem(key, key)
+            self.reader_combo.setItemData(self.reader_combo.count() - 1, tip,
+                                          QtCore.Qt.ToolTipRole)
+        self.reader_combo.setCurrentIndex(0)  # default read_auto
+        self.reader_args = QtWidgets.QLineEdit()
+        self.reader_args.setPlaceholderText("参数, 如 radar_type=SA")
+        self.reader_args.setClearButtonEnabled(True)
+        self.reader_row = QtWidgets.QHBoxLayout()
+        self.reader_row.addWidget(self.reader_combo, 3)
+        self.reader_row.addWidget(self.reader_args, 2)
+        self.reader_layout.addLayout(self.reader_row)
+        self.left_layout.addWidget(self.reader_group)
+
         # --- Scan Info ---
         self.info_group = QtWidgets.QGroupBox("扫描信息")
         self.info_layout = QtWidgets.QVBoxLayout(self.info_group)
